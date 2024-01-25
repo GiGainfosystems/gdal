@@ -1,6 +1,7 @@
 # Changes
 
 ## Unreleased
+- Add a `bundled` feature for `gdal-sys` that allows to build and statically link a minimal bundled version of gdal during `cargo build`
 - Add `DriverIterator` format to iterate through drivers, as well as `DriverManager::all()` method that provides the iterator.
   - <https://github.com/georust/gdal/pull/512>
 

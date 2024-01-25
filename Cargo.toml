@@ -36,7 +36,7 @@ tempfile = "3.8"
 arrow2 = "0.18"
 
 [workspace]
-members = ["gdal-sys"]
+members = ["gdal-src", "gdal-sys"]
 
 # docs.rs-specific configuration
 [package.metadata.docs.rs]
@@ -44,3 +44,8 @@ members = ["gdal-sys"]
 features = ["array"]
 # define attribute `docsrs` for feature badges
 rustdoc-args = ["--cfg", "docsrs"]
+
+
+[patch.crates-io]
+proj-sys = { git = "https://github.com/GiGainfosystems/proj", rev = "54716dd8955d4f0561ce9bf8a83610b605e3c007" }
+libsqlite3-sys = { git = "https://github.com/rusqlite/rusqlite/", rev = "42a82fb" }
