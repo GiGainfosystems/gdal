@@ -12,7 +12,9 @@ fn main() {
         "libproj.a"
     };
 
-    let res = cmake::Config::new("source")
+    let mut config = cmake::Config::new("source");
+
+    config
         .define("GDAL_BUILD_OPTIONAL_DRIVERS", "OFF")
         .define("OGR_BUILD_OPTIONAL_DRIVERS", "OFF")
         .define("GDAL_USE_INTERNAL_LIBS", "ON")
@@ -36,8 +38,36 @@ fn main() {
         .define("SQLite3_INCLUDE_DIR", sqlite3_include_dir)
         .define("SQLite3_LIBRARY", format!("{sqlite3_lib_dir}/libsqlite3.a"))
         .define("OGR_ENABLE_DRIVER_GPKG", "ON")
-        .pic(true)
-        .build();
+        // .define("OGR_ENABLE_DRIVER_AVC", "ON")
+        // .define("OGR_ENABLE_DRIVER_CAD", "ON")
+        // .define("OGR_ENABLE_DRIVER_CSV", "ON")
+        // .define("OGR_ENABLE_DRIVER_DGN", "ON")
+        // .define("OGR_ENABLE_DRIVER_DXF", "ON")
+        // .define("OGR_ENABLE_DRIVER_EDIGEO", "ON")
+        // .define("OGR_ENABLE_DRIVER_FLATGEOBUF", "ON")
+        // .define("OGR_ENABLE_DRIVER_GEOCONCEPT", "ON")
+        // .define("OGR_ENABLE_DRIVER_GEOJSON", "ON")
+        // .define("OGR_ENABLE_DRIVER_GMT", "ON")
+        // .define("OGR_ENABLE_DRIVER_JSONFG", "ON")
+        // .define("OGR_ENABLE_DRIVER_MAPML", "ON")
+        // .define("OGR_ENABLE_DRIVER_NTF", "ON")
+        // .define("OGR_ENABLE_DRIVER_OPENFILEGDB", "ON")
+        // .define("OGR_ENABLE_DRIVER_PGDUMP", "ON")
+        // .define("OGR_ENABLE_DRIVER_S57", "ON")
+        // .define("OGR_ENABLE_DRIVER_SELAFIN", "ON")
+        // .define("OGR_ENABLE_DRIVER_SHAPE", "ON")
+        // .define("OGR_ENABLE_DRIVER_SXF", "ON")
+        // .define("OGR_ENABLE_DRIVER_TIGER", "ON")
+        // .define("OGR_ENABLE_DRIVER_VDV", "ON")
+        // .define("OGR_ENABLE_DRIVER_VRT", "ON")
+        // .define("OGR_ENABLE_DRIVER_WASP", "ON")
+        // .define("ACCEPT_MISSING_LINUX_FS_HEADER", "ON")
+        .pic(true);
+    if cfg!(target_env = "msvc") {
+        config.profile("Release");
+    }
+
+    let res = config.build();
 
     // sometimes it's lib and sometimes it's lib64 and sometimes `build/lib`
     let lib_dir = res.join("lib64");
