@@ -47,5 +47,6 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 
 [patch.crates-io]
-proj-sys = { git = "https://github.com/GiGainfosystems/proj", rev = "54716dd8955d4f0561ce9bf8a83610b605e3c007" }
+proj-sys = { git = "https://github.com/GiGainfosystems/proj", rev = "dc67b5afc17bc7d330371e4406dffd65cf9321cd" }
 libsqlite3-sys = { git = "https://github.com/rusqlite/rusqlite/", rev = "42a82fb" }
+pq-sys = { git = "https://github.com/sgrif/pq-sys", rev = "77e6729" }
