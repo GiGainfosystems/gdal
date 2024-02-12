@@ -12,3 +12,4 @@ extern crate netcdf_src;
 extern crate pq_src;
 
 extern crate proj_sys;
+extern crate link_cplusplus;
