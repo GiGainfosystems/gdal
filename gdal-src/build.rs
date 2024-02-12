@@ -43,12 +43,18 @@ fn find_library(lib_name: &str, path: impl Into<std::path::PathBuf>) -> String {
 fn main() {
     let proj_root =
         std::path::PathBuf::from(std::env::var("DEP_PROJ_ROOT").expect("set by proj-sys"));
-    let proj_lib = if proj_root.join("lib").join("proj_d.lib").exists() {
-        "proj_d.lib"
-    } else if proj_root.join("lib").join("proj.lib").exists() {
-        "proj.lib"
+    let proj_library = if std::env::var("CARGO_CFG_TARGET_FAMILY").as_deref() == Ok("windows") {
+        if proj_root.join("lib").join("proj_d.lib").exists() {
+            proj_root.join("lib").join("proj.lib").display().to_string()
+        } else {
+            proj_root
+                .join("lib")
+                .join("proj_d.lib")
+                .display()
+                .to_string()
+        }
     } else {
-        "libproj.a"
+        find_library("proj", &proj_root)
     };
 
     let mut config = cmake::Config::new("source");
@@ -68,10 +74,7 @@ fn main() {
             "PROJ_INCLUDE_DIR",
             format!("{}/include", proj_root.display()),
         )
-        .define(
-            "PROJ_LIBRARY",
-            format!("{}/lib/{proj_lib}", proj_root.display()),
-        )
+        .define("PROJ_LIBRARY", proj_library)
         .pic(true)
         .define("ACCEPT_MISSING_LINUX_FS_HEADER", "ON");
     // enable the gpkg driver
