@@ -45,11 +45,11 @@ fn main() {
         std::path::PathBuf::from(std::env::var("DEP_PROJ_ROOT").expect("set by proj-sys"));
     let proj_library = if std::env::var("CARGO_CFG_TARGET_FAMILY").as_deref() == Ok("windows") {
         if proj_root.join("lib").join("proj_d.lib").exists() {
-            proj_root.join("lib").join("proj.lib").display().to_string()
+            proj_root.join("lib").join("proj_d.lib").display().to_string()
         } else {
             proj_root
                 .join("lib")
-                .join("proj_d.lib")
+                .join("proj.lib")
                 .display()
                 .to_string()
         }
