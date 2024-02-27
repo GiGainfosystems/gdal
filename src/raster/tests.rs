@@ -1,8 +1,9 @@
 use crate::dataset::Dataset;
+use crate::errors::Result;
 use crate::metadata::Metadata;
 use crate::raster::rasterband::ResampleAlg;
 use crate::raster::{
-    ByteBuffer, ColorEntry, ColorInterpretation, ColorTable, GdalDataType, RasterCreationOption,
+    ByteBuffer, ColorEntry, ColorInterpretation, ColorTable, GdalDataType, RasterCreationOptions,
     StatisticsAll, StatisticsMinMax,
 };
 use crate::test_utils::{fixture, TempFixture};
@@ -61,6 +62,12 @@ fn test_read_raster() {
     rb.read_into_slice((20, 30), (2, 3), (2, 3), buf.data_mut(), None)
         .unwrap();
     assert_eq!(buf.data(), vec!(7, 7, 7, 10, 8, 12));
+}
+
+#[test]
+fn test_read_rasterbands() {
+    let dataset = Dataset::open(fixture("tinymarble.tif")).unwrap();
+    assert_eq!(dataset.rasterbands().count(), 3);
 }
 
 #[test]
@@ -127,7 +134,9 @@ fn test_rename_remove_raster() {
 
     let driver = DriverManager::get_driver_by_name("GTiff").unwrap();
 
-    dataset.create_copy(&driver, mem_file_path_a, &[]).unwrap();
+    dataset
+        .create_copy(&driver, mem_file_path_a, &Default::default())
+        .unwrap();
 
     driver.rename(mem_file_path_b, mem_file_path_a).unwrap();
 
@@ -166,28 +175,13 @@ fn test_create_with_band_type() {
 #[test]
 fn test_create_with_band_type_with_options() {
     let driver = DriverManager::get_driver_by_name("GTiff").unwrap();
-    let options = [
-        RasterCreationOption {
-            key: "TILED",
-            value: "YES",
-        },
-        RasterCreationOption {
-            key: "BLOCKXSIZE",
-            value: "128",
-        },
-        RasterCreationOption {
-            key: "BLOCKYSIZE",
-            value: "64",
-        },
-        RasterCreationOption {
-            key: "COMPRESS",
-            value: "LZW",
-        },
-        RasterCreationOption {
-            key: "INTERLEAVE",
-            value: "BAND",
-        },
-    ];
+    let options = RasterCreationOptions::from_iter([
+        "TILED=YES",
+        "BLOCKXSIZE=128",
+        "BLOCKYSIZE=64",
+        "COMPRESS=LZW",
+        "INTERLEAVE=BAND",
+    ]);
 
     let tmp_filename = TempFixture::empty("test.tif");
     {
@@ -214,7 +208,9 @@ fn test_create_with_band_type_with_options() {
 fn test_create_copy() {
     let driver = DriverManager::get_driver_by_name("MEM").unwrap();
     let dataset = Dataset::open(fixture("tinymarble.tif")).unwrap();
-    let copy = dataset.create_copy(&driver, "", &[]).unwrap();
+    let copy = dataset
+        .create_copy(&driver, "", &Default::default())
+        .unwrap();
     assert_eq!(copy.raster_size(), (100, 50));
     assert_eq!(copy.raster_count(), 3);
 }
@@ -234,16 +230,7 @@ fn test_create_copy_with_options() {
         .create_copy(
             &DriverManager::get_driver_by_name("GTiff").unwrap(),
             mem_file_path,
-            &[
-                RasterCreationOption {
-                    key: "INTERLEAVE",
-                    value: "BAND",
-                },
-                RasterCreationOption {
-                    key: "COMPRESS",
-                    value: "LZW",
-                },
-            ],
+            &RasterCreationOptions::from_iter(["INTERLEAVE=BAND", "COMPRESS=LZW"]),
         )
         .unwrap();
 
@@ -391,20 +378,7 @@ fn test_read_block_data() {
 #[cfg(feature = "ndarray")]
 fn test_write_block() {
     let driver = DriverManager::get_driver_by_name("GTiff").unwrap();
-    let options = [
-        RasterCreationOption {
-            key: "TILED",
-            value: "YES",
-        },
-        RasterCreationOption {
-            key: "BLOCKXSIZE",
-            value: "16",
-        },
-        RasterCreationOption {
-            key: "BLOCKYSIZE",
-            value: "16",
-        },
-    ];
+    let options = RasterCreationOptions::from_iter(["TILED=YES", "BLOCKXSIZE=16", "BLOCKYSIZE=16"]);
     let dataset = driver
         .create_with_band_type_with_options::<u16, _>(
             "/vsimem/test_write_block.tif",
@@ -457,16 +431,43 @@ fn test_get_rasterband() {
 }
 
 #[test]
-fn test_get_no_data_value() {
-    let dataset = Dataset::open(fixture("tinymarble.tif")).unwrap();
-    let rasterband = dataset.rasterband(1).unwrap();
+fn test_get_no_data_value() -> Result<()> {
+    let dataset = Dataset::open(fixture("tinymarble.tif"))?;
+    let rasterband = dataset.rasterband(1)?;
     let no_data_value = rasterband.no_data_value();
     assert!(no_data_value.is_none());
 
-    // let dataset = Dataset::open(fixture!("bluemarble.tif")).unwrap();
-    // let rasterband = dataset.get_rasterband(1).unwrap();
-    // let no_data_value = rasterband.get_no_data_value();
-    // assert_eq!(no_data_value, Some(0.0));
+    let dataset = Dataset::open(fixture("labels.tif"))?;
+    let rasterband = dataset.rasterband(1)?;
+    let no_data_value = rasterband.no_data_value();
+    assert_eq!(no_data_value, Some(255.0));
+    Ok(())
+}
+
+#[test]
+#[cfg(all(major_ge_3, minor_ge_5))]
+fn test_no_data_value_i64() -> Result<()> {
+    let driver = DriverManager::get_driver_by_name("MEM")?;
+    let ds = driver.create_with_band_type::<i64, _>("test_no_data_value_i64", 1, 1, 1)?;
+    let mut rasterband = ds.rasterband(1)?;
+    assert_eq!(rasterband.no_data_value_i64(), None);
+    rasterband.set_no_data_value_i64(Some(i64::MIN))?;
+    assert_eq!(rasterband.no_data_value_i64(), Some(i64::MIN));
+
+    Ok(())
+}
+
+#[test]
+#[cfg(all(major_ge_3, minor_ge_5))]
+fn test_no_data_value_u64() -> Result<()> {
+    let driver = DriverManager::get_driver_by_name("MEM")?;
+    let ds = driver.create_with_band_type::<u64, _>("test_no_data_value_u64", 1, 1, 1)?;
+    let mut rasterband = ds.rasterband(1)?;
+    assert_eq!(rasterband.no_data_value_u64(), None);
+    rasterband.set_no_data_value_u64(Some(u64::MAX))?;
+    assert_eq!(rasterband.no_data_value_u64(), Some(u64::MAX));
+
+    Ok(())
 }
 
 #[test]
@@ -724,7 +725,7 @@ fn test_create_color_table() {
 
         // Create a new file to put color table in
         let dataset = dataset
-            .create_copy(&dataset.driver(), &outfile, &[])
+            .create_copy(&dataset.driver(), &outfile, &Default::default())
             .unwrap();
         dataset
             .rasterband(1)

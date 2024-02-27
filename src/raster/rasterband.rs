@@ -42,6 +42,24 @@ impl Dataset {
         }
     }
 
+    /// Get the bands of a dataset.
+    ///
+    /// Returns an iterator over the [`RasterBands`]s in the current [`Dataset`].
+    ///
+    /// # Example
+    ///
+    /// ```rust, no_run
+    /// use gdal::Dataset;
+    /// # fn main() -> gdal::errors::Result<()> {
+    /// let ds = Dataset::open("fixtures/tinymarble.tif")?;
+    /// assert_eq!(ds.rasterbands().count(), 3);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn rasterbands(&self) -> impl Iterator<Item = Result<RasterBand>> {
+        (1..=self.raster_count()).map(|idx| self.rasterband(idx))
+    }
+
     /// Builds overviews for the current `Dataset`. See [`GDALBuildOverviews`].
     ///
     /// # Arguments
@@ -578,23 +596,12 @@ impl<'a> RasterBand<'a> {
     /// ```rust, no_run
     /// # fn main() -> gdal::errors::Result<()> {
     /// use gdal::DriverManager;
-    /// use gdal::raster::{Buffer, RasterCreationOption};
+    /// use gdal::raster::{Buffer, RasterCreationOptions };
     ///
     /// let driver = DriverManager::get_driver_by_name("GTiff").unwrap();
-    /// let options = [
-    ///     RasterCreationOption {
-    ///         key: "TILED",
-    ///         value: "YES",
-    ///     },
-    ///     RasterCreationOption {
-    ///         key: "BLOCKXSIZE",
-    ///         value: "16",
-    ///     },
-    ///     RasterCreationOption {
-    ///         key: "BLOCKYSIZE",
-    ///         value: "16",
-    ///     },
-    /// ];
+    /// let options = RasterCreationOptions::from_iter([
+    ///    "TILED=YES", "BLOCKXSIZE=16", "BLOCKYSIZE=16"
+    /// ]);
     /// let dataset = driver
     ///     .create_with_band_type_with_options::<u16, _>(
     ///         "/vsimem/test_write_block.tif",
@@ -696,7 +703,7 @@ impl<'a> RasterBand<'a> {
         None
     }
 
-    /// Set the no data value of this band.
+    /// Sets the no-data value of this band.
     ///
     /// If `no_data` is `None`, any existing no-data value is deleted.
     pub fn set_no_data_value(&mut self, no_data: Option<f64>) -> Result<()> {
@@ -713,6 +720,101 @@ impl<'a> RasterBand<'a> {
         }
     }
 
+    /// Fetch the no-data value for this band.
+    ///
+    /// This method should ONLY be called on bands whose data type is `UInt64`.
+    ///
+    /// The no data value returned is 'raw', meaning that it has no offset and scale applied.
+    ///
+    /// # Returns
+    /// No-data value as `Some(i64)` if no-data value exists, `None` otherwise.
+    ///
+    /// # Notes
+    /// See also: [`GDALGetRasterNoDataValueAsUInt64`](https://gdal.org/api/raster_c_api.html#_CPPv432GDALGetRasterNoDataValueAsUInt6415GDALRasterBandHPi)
+    #[cfg(all(major_ge_3, minor_ge_5))]
+    pub fn no_data_value_u64(&self) -> Option<u64> {
+        let mut pb_success = 1;
+        let no_data = unsafe {
+            gdal_sys::GDALGetRasterNoDataValueAsUInt64(self.c_rasterband, &mut pb_success)
+        };
+        if pb_success == 1 {
+            return Some(no_data);
+        }
+        None
+    }
+
+    /// Sets the no-data value for a `UInt64` band.
+    ///
+    /// This method should ONLY be called on bands whose data type is `UInt64`.
+    ///
+    /// If `no_data` is `None`, any existing no-data value is deleted.
+    ///
+    /// # Notes
+    /// See also:
+    /// [`GDALSetRasterNoDataValueAsUInt64`](https://gdal.org/api/raster_c_api.html#_CPPv432GDALSetRasterNoDataValueAsUInt6415GDALRasterBandH8uint64_t),
+    /// [`GDALDeleteRasterNoDataValue`](https://gdal.org/api/raster_c_api.html#_CPPv427GDALDeleteRasterNoDataValue15GDALRasterBandH)
+    #[cfg(all(major_ge_3, minor_ge_5))]
+    pub fn set_no_data_value_u64(&mut self, no_data: Option<u64>) -> Result<()> {
+        let rv = if let Some(no_data) = no_data {
+            unsafe { gdal_sys::GDALSetRasterNoDataValueAsUInt64(self.c_rasterband, no_data) }
+        } else {
+            unsafe { gdal_sys::GDALDeleteRasterNoDataValue(self.c_rasterband) }
+        };
+
+        if rv != CPLErr::CE_None {
+            Err(_last_cpl_err(rv))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Fetch the no-data value for this band.
+    ///
+    /// This method should ONLY be called on bands whose data type is `Int64`.
+    ///
+    /// The no data value returned is 'raw', meaning that it has no offset and scale applied.
+    ///
+    /// # Returns
+    /// No-data value as `Some(i64)` if no-data value exists, `None` otherwise.
+    ///
+    /// # Notes
+    /// See also: [`GDALGetRasterNoDataValueAsInt64`](https://gdal.org/api/gdalrasterband_cpp.html#_CPPv4N14GDALRasterBand21GetNoDataValueAsInt64EPi)
+    #[cfg(all(major_ge_3, minor_ge_5))]
+    pub fn no_data_value_i64(&self) -> Option<i64> {
+        let mut pb_success = 1;
+        let no_data = unsafe {
+            gdal_sys::GDALGetRasterNoDataValueAsInt64(self.c_rasterband, &mut pb_success)
+        };
+        if pb_success == 1 {
+            return Some(no_data);
+        }
+        None
+    }
+
+    /// Sets the no-data value for a `Int64` band.
+    ///
+    /// This method should ONLY be called on bands whose data type is `Int64`.
+    ///
+    /// If `no_data` is `None`, any existing no-data value is deleted.
+    ///
+    /// # Notes
+    /// See also:
+    /// [`GDALSetRasterNoDataValueAsInt64`](https://gdal.org/api/raster_c_api.html#_CPPv431GDALSetRasterNoDataValueAsInt6415GDALRasterBandH7int64_t),
+    /// [`GDALDeleteRasterNoDataValue`](https://gdal.org/api/raster_c_api.html#_CPPv427GDALDeleteRasterNoDataValue15GDALRasterBandH)
+    #[cfg(all(major_ge_3, minor_ge_5))]
+    pub fn set_no_data_value_i64(&mut self, no_data: Option<i64>) -> Result<()> {
+        let rv = if let Some(no_data) = no_data {
+            unsafe { gdal_sys::GDALSetRasterNoDataValueAsInt64(self.c_rasterband, no_data) }
+        } else {
+            unsafe { gdal_sys::GDALDeleteRasterNoDataValue(self.c_rasterband) }
+        };
+
+        if rv != CPLErr::CE_None {
+            Err(_last_cpl_err(rv))
+        } else {
+            Ok(())
+        }
+    }
     /// Returns the color interpretation of this band.
     pub fn color_interpretation(&self) -> ColorInterpretation {
         let interp_index = unsafe { gdal_sys::GDALGetRasterColorInterpretation(self.c_rasterband) };
@@ -1434,7 +1536,7 @@ impl Debug for ColorEntry {
 ///
 /// // Create in-memory copy to mutate
 /// let mem_driver = DriverManager::get_driver_by_name("MEM")?;
-/// let ds = ds.create_copy(&mem_driver, "<mem>", &[])?;
+/// let ds = ds.create_copy(&mem_driver, "<mem>", &Default::default())?;
 /// let mut band = ds.rasterband(1)?;
 /// assert!(band.color_table().is_none());
 ///
@@ -1448,7 +1550,7 @@ impl Debug for ColorEntry {
 ///
 /// // Render a PNG
 /// let png_driver = DriverManager::get_driver_by_name("PNG")?;
-/// ds.create_copy(&png_driver, "/tmp/labels.png", &[])?;
+/// ds.create_copy(&png_driver, "/tmp/labels.png", &Default::default())?;
 ///
 /// # Ok(())
 /// # }
