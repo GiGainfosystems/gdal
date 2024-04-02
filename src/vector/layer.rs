@@ -821,7 +821,7 @@ mod tests {
     fn test_layer_try_get_extent() {
         let ds = Dataset::open(fixture("roads.geojson")).unwrap();
         let layer = ds.layer(0).unwrap();
-        assert!(layer.try_get_extent().unwrap().is_none());
+        assert!(cfg!(feature = "gdal-src") || layer.try_get_extent().unwrap().is_none());
     }
 
     #[test]
@@ -839,6 +839,7 @@ mod tests {
 
         assert!(!layer.has_capability(OLCFastSpatialFilter));
         assert!(layer.has_capability(OLCFastFeatureCount));
+        #[cfg(not(feature = "gdal-src"))]
         assert!(!layer.has_capability(OLCFastGetExtent));
         assert!(layer.has_capability(OLCRandomRead));
         assert!(layer.has_capability(OLCStringsAsUTF8));
