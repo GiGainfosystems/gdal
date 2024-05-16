@@ -48,4 +48,4 @@ rustdoc-args = ["--cfg", "docsrs"]
 
 
 [patch.crates-io]
-proj-sys = { git = "https://github.com/georust/proj", rev = "57c9e80" }
+proj-sys = { git = "https://github.com/georust/proj", rev = "7ac9b1efdb87110fbe93329c43dbcedcf56b33c3" }
