@@ -50,6 +50,9 @@ fn find_library(lib_name: &str, path: impl Into<std::path::PathBuf>) -> String {
 }
 
 fn main() {
+    if cfg!(feature = "nobuild") {
+        return;
+    }
     let proj_root =
         std::path::PathBuf::from(std::env::var("DEP_PROJ_ROOT").expect("set by proj-sys"));
     let proj_library = if std::env::var("CARGO_CFG_TARGET_FAMILY").as_deref() == Ok("windows") {
