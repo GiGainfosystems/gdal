@@ -4,6 +4,8 @@
 
 - Add a `bundled` feature for `gdal-sys` that allows to build and statically link a minimal bundled version of gdal during `cargo build`
 
+## 0.17
+
 - Added pre-built bindings for GDAL 3.9
 
    - <https://github.com/georust/gdal/pull/539>
