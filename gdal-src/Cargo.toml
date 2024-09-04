@@ -10,9 +10,8 @@ links = "gdal_src"
 link-cplusplus = "1.0"
 proj-sys = { version = "0.24.0", features = ["bundled_proj"] }
 libsqlite3-sys = { version = "0.28.0", features = ["bundled"], optional = true }
-hdf5-src = { version = "0.8.1", optional = true, features = ["hl"] }
-hdf5-sys = { version = "0.8.1", optional = true, features = ["static"] }
-netcdf-src = { version = "0.3.3", optional = true }
+hdf5-sys = { package = "hdf5-metno-sys", version = "0.9.1", optional = true, features = ["static", "hl", "deprecated"] }
+netcdf-sys = { version = "0.8.1", optional = true, features = ["static"] }
 pq-src = { version = "0.1.3", optional = true }
 curl-sys = { version = "0.4.70", features = ["static-curl"], optional = true }
 libz-sys = { version = "1.1.15", features = ["static"], optional = true }
@@ -56,11 +55,11 @@ all_drivers = [
 # that you statically link libgeos and
 # therefore makes your binary fall under
 # LGPL as well
-geos_static = ["geos", "geos-sys/static", "geos-src"]
+geos_static = ["geos", "dep:geos-sys", "geos-sys?/static", "dep:geos-src"]
 # as long as the `geos_static` feature
 # is not enabled that will only
 # dynamically link geos
-geos = ["geos-sys"]
+geos = ["dep:geos-sys"]
 
 internal_drivers = [
     # ogr internal,
@@ -275,6 +274,7 @@ driver_vfk = ["driver_sqlite"]
 driver_rasterlite = [] # unclear how to handle that
 
 # curl
+curl-sys = ["dep:curl-sys"]
 driver_amigocloud = ["curl-sys"]
 driver_carto = ["curl-sys"]
 driver_daas = ["curl-sys"]
@@ -310,10 +310,10 @@ driver_pg = ["dep:pq-src"]
 driver_postgis_raster = ["driver_pg"]
 
 # libhdf5
-driver_hdf5 = ["dep:hdf5-src", "dep:libz-sys"]
+driver_hdf5 = ["dep:hdf5-sys", "hdf5-sys?/zlib", "dep:libz-sys"]
 
 # libnetcdf
-driver_netcdf = ["dep:netcdf-src", "driver_hdf5", "dep:hdf5-sys"]
+driver_netcdf = ["dep:netcdf-sys", "driver_hdf5"]
 
 # poppler
 #driver_pdf = []
