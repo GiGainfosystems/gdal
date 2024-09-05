@@ -215,7 +215,6 @@ fn main() {
 
     if cfg!(feature = "driver_hdf5") {
         let hdf5_dir = std::env::var("DEP_HDF5_ROOT").expect("This is set by hdf5-sys");
-        // let hdf5_dir = format!("{hdf5_dir}/..");
         let hdf5_lib = std::env::var("DEP_HDF5_LIBRARY").expect("This is set by hdf5-sys");
         let hdf5_lib_dir = find_library(&hdf5_lib, &hdf5_dir);
         let mut hdf5_cc = PathBuf::from(&hdf5_dir);

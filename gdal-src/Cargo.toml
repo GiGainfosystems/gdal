@@ -274,7 +274,6 @@ driver_vfk = ["driver_sqlite"]
 driver_rasterlite = [] # unclear how to handle that
 
 # curl
-curl-sys = ["dep:curl-sys"]
 driver_amigocloud = ["curl-sys"]
 driver_carto = ["curl-sys"]
 driver_daas = ["curl-sys"]
